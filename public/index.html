@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ClassHub SMKN 1 Jakarta - Sistem Manajemen Kas Kelas XI RPL">
+    <title>ClassHub - Database Kas XI RPL</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="wadah-aplikasi">
+        <header class="bilah-atas">
+            <div class="area-pengguna">
+                <div class="teks-pengguna">
+                    <span id="sapaan-pengguna">Pengguna: Tamu</span>
+                    <h1 id="judul-halaman">Sistem Database ClassHub</h1>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <button type="button" id="btn-buka-notif" style="cursor:pointer; padding:2px 6px; font-size:0.8rem; font-family:'Times New Roman', Times, serif;">
+                    Notifikasi <span id="notif-badge" style="display:none; color:red; font-weight:bold;">(0)</span>
+                </button>
+                <div id="badge-role" class="lencana-peran">Visitor</div>
+            </div>
+        </header>
+
+        <main class="konten-utama">
+            <section id="halaman-masuk" class="halaman aktif">
+                <div class="header-auth">
+                    <h2>ClassHub XI RPL</h2>
+                    <p>Sistem Operasional Kas & Database Sekolah</p>
+                </div>
+                <form id="form-masuk">
+                    <label for="masuk-id">NIS / Email</label>
+                    <input type="text" id="masuk-id" placeholder="NIS atau Email" required>
+                    <label for="masuk-sandi">Kata Sandi</label>
+                    <input type="password" id="masuk-sandi" placeholder="Kata Sandi" required>
+                    <div class="opsi-auth"><a href="#" id="link-lupa-sandi">Lupa Kata Sandi?</a></div>
+                    <button type="submit">Masuk</button>
+                </form>
+                <div class="pilihan-alternatif">
+                    <p>Belum ada akun? <a href="#" id="link-ke-daftar">Daftar Akun Baru</a></p>
+                </div>
+                <div class="uji-akses-cepat">
+                    <span>Simulasi Login Pengguna Database:</span>
+                    <button type="button" class="btn-demo" data-nis="202523183">Admin: Adzan (202523183)</button>
+                    <button type="button" class="btn-demo" data-nis="202523180">Bendahara: Adel (202523180)</button>
+                    <button type="button" class="btn-demo" data-nis="202523200">Siswa: Ojan (202523200)</button>
+                    <button type="button" class="btn-demo" data-nis="VISITOR">Masuk Sebagai Visitor (Readonly)</button>
+                </div>
+            </section>
+
+            <section id="halaman-daftar" class="halaman">
+                <div class="header-auth">
+                    <h2>Form Pendaftaran Akun</h2>
+                </div>
+                <form id="form-daftar">
+                    <label for="daftar-nis">NIS Siswa</label>
+                    <input type="text" id="daftar-nis" placeholder="Nomor Induk Siswa" required>
+                    <label for="daftar-nama">Nama Lengkap</label>
+                    <input type="text" id="daftar-nama" placeholder="Nama Lengkap" required>
+                    <label for="daftar-email">Email</label>
+                    <input type="email" id="daftar-email" placeholder="Email Siswa">
+                    <label for="daftar-sandi">Kata Sandi</label>
+                    <input type="password" id="daftar-sandi" placeholder="Kata Sandi" required>
+                    <label for="daftar-kelamin">Jenis Kelamin</label>
+                    <select id="daftar-kelamin">
+                        <option value="L">Laki-laki</option>
+                        <option value="P">Perempuan</option>
+                    </select>
+                    <button type="submit">Kirim Pendaftaran</button>
+                </form>
+                <div class="pilihan-alternatif">
+                    <p><a href="#" id="link-ke-masuk">Kembali ke Login</a></p>
+                </div>
+            </section>
+
+            <section id="halaman-lupa-sandi" class="halaman">
+                <h2>Lupa Kata Sandi</h2>
+                <form id="form-lupa-sandi">
+                    <label for="lupa-email">Email / NIS</label>
+                    <input type="text" id="lupa-email" placeholder="Email atau NIS" required>
+                    <button type="submit">Kirim Instruksi</button>
+                </form>
+                <div class="pilihan-alternatif"><p><a href="#" id="link-batal-lupa">Batal</a></p></div>
+            </section>
+
+            <section id="halaman-beranda" class="halaman">
+                <article class="kartu-ringkasan utama">
+                    <h3>Sisa Saldo Kas Kelas</h3>
+                    <p id="beranda-saldo">Rp 0</p>
+                </article>
+                <div class="baris-ringkasan">
+                    <article class="kartu-ringkasan"><h4>Total Masuk</h4><p id="beranda-masuk">Rp 0</p></article>
+                    <article class="kartu-ringkasan"><h4>Total Keluar</h4><p id="beranda-keluar">Rp 0</p></article>
+                </div>
+                <section class="blok-kontainer">
+                    <h3>Piket Kebersihan</h3>
+                    <ul id="daftar-piket-hari-ini" class="daftar-item-beranda"><li>Senin: Adzan, Safa, Nauval</li></ul>
+                </section>
+                <section class="blok-kontainer">
+                    <h3>Inventaris Kelas</h3>
+                    <ul id="daftar-inventaris-beranda" class="daftar-item-beranda"><li>Proyektor TU: Tersedia</li></ul>
+                </section>
+                <div class="area-tombol-tindakan-beranda">
+                    <div class="baris-tombol-dua">
+                        <button type="button" class="btn-tindakan" data-halaman="halaman-input">Input Transaksi</button>
+                        <button type="button" class="btn-tindakan" data-halaman="halaman-uang-kas">Riwayat Transaksi</button>
+                    </div>
+                    <button type="button" class="btn-tindakan utama" data-halaman="halaman-rekapan-kas">Laporan Keuangan Database</button>
+                </div>
+            </section>
+
+            <section id="halaman-uang-kas" class="halaman">
+                <div class="baris-ringkasan">
+                    <article class="kartu-ringkasan"><h4>Total Masuk</h4><p id="kas-masuk-detail">Rp 0</p></article>
+                    <article class="kartu-ringkasan"><h4>Total Keluar</h4><p id="kas-keluar-detail">Rp 0</p></article>
+                </div>
+                <article class="kartu-ringkasan utama"><h3>Sisa Saldo Kas</h3><p id="kas-saldo">Rp 0</p></article>
+                <h3>Feed Transaksi Kas</h3>
+                <ul id="daftar-transaksi-kas" class="daftar-riwayat"><li>Belum ada transaksi</li></ul>
+            </section>
+
+            <section id="halaman-input" class="halaman">
+                <h2>Input Data Transaksi Kas</h2>
+                <div id="peringatan-role-siswa" class="pesan-info" style="display:none;">Mode Readonly: Visitor tidak dapat menambah data.</div>
+                <form id="form-input-kas" enctype="multipart/form-data">
+                    <label for="input-jenis">Jenis Transaksi</label>
+                    <select id="input-jenis" name="jenis">
+                        <option value="masuk">Uang Masuk</option>
+                        <option value="keluar">Uang Keluar</option>
+                    </select>
+                    <label for="input-nominal">Nominal (Rp)</label>
+                    <input type="number" id="input-nominal" name="nominal" placeholder="Contoh: 50000" required>
+                    <label for="input-keterangan">Keterangan Transaksi</label>
+                    <textarea id="input-keterangan" name="keterangan" placeholder="Keterangan..." required></textarea>
+                    <label for="input-nota">Foto Nota (Opsional)</label>
+                    <input type="file" id="input-nota" name="nota" accept="image/*">
+                    <button type="submit" id="btn-submit-kas">Simpan Data Transaksi</button>
+                </form>
+            </section>
+
+            <section id="halaman-rekapan-kas" class="halaman">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:8px;">
+                    <h2>Laporan Kas Database</h2>
+                    <button type="button" id="btn-export-csv" class="btn-tindakan utama" onclick="exportLaporanKasCSV()" style="font-size:0.8rem; padding:4px 8px;">Export Excel/CSV</button>
+                </div>
+                <div id="tabel-kas-wadah" class="blok-kontainer"><p>Memuat laporan kas...</p></div>
+            </section>
+
+            <section id="halaman-profil" class="halaman">
+                <article class="kartu-profil">
+                    <h2 id="profil-nama">Nama Siswa</h2>
+                    <p id="profil-nis">NIS: -</p>
+                    <p id="profil-email">Email: -</p>
+                    <p id="profil-bio" style="font-size:0.85rem; margin-top:4px;">-</p>
+                    <p id="profil-poin" style="font-size:0.85rem; font-weight:bold; margin-top:4px;">Poin Keaktifan: 0 Pts</p>
+                    <p id="profil-dibuat" style="font-size:0.8rem; margin-top:2px;">Dibuat: -</p>
+                    <p id="profil-durasi-online" style="font-size:0.8rem; font-weight:bold; margin-top:2px;">Durasi Sesi: 00:00</p>
+                    <div id="profil-role-badge" class="lencana-peran" style="display:inline-block; margin-top:6px;">Visitor</div>
+                    
+                    <div id="wadah-tombol-profil" style="display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;">
+                        <button type="button" id="btn-buka-edit-profil" class="btn-tindakan">Edit Profil</button>
+                        <button type="button" id="btn-buka-pengajuan-peran" class="btn-tindakan">Ajukan Peran</button>
+                    </div>
+                </article>
+
+                <section class="blok-kontainer" style="margin-top:10px;">
+                    <h3>Riwayat Aktivitas Database</h3>
+                    <ul id="daftar-log-aktivitas" class="daftar-item-beranda" style="display:flex; flex-direction:column; gap:4px; margin-top:6px; max-height:140px; overflow-y:auto;">
+                        <li>Memuat log aktivitas...</li>
+                    </ul>
+                </section>
+
+                <section class="blok-kontainer" style="margin-top:10px;">
+                    <h3>Leaderboard Keaktifan Siswa</h3>
+                    <ul id="daftar-leaderboard" class="daftar-item-beranda" style="display:flex; flex-direction:column; gap:6px; margin-top:6px;">
+                        <li>Memuat leaderboard...</li>
+                    </ul>
+                </section>
+
+                <div id="panel-admin" class="panel-admin" style="display:none; margin-top:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #000; padding-bottom:4px; margin-bottom:8px;">
+                        <h3>Panel Admin God Mode</h3>
+                        <span class="lencana-peran">ADMIN</span>
+                    </div>
+
+                    <h3>Kelola Role Anggota</h3>
+                    <ul id="daftar-anggota-admin" class="daftar-anggota-admin"><li>Memuat daftar akun...</li></ul>
+
+                    <h3 style="margin-top:10px;">Kirim Broadcast Notifikasi</h3>
+                    <form id="form-broadcast-notif" style="margin-top:4px; padding:6px; border:1px solid #000;">
+                        <label for="broadcast-target">Penerima</label>
+                        <select id="broadcast-target">
+                            <option value="SEMUA">Semua Member (Broadcast)</option>
+                        </select>
+                        <label for="broadcast-judul">Judul Notifikasi</label>
+                        <input type="text" id="broadcast-judul" placeholder="Judul..." required>
+                        <label for="broadcast-pesan">Isi Pesan</label>
+                        <textarea id="broadcast-pesan" rows="3" placeholder="Pesan..." required></textarea>
+                        <button type="submit" class="btn-tindakan utama" style="width:100%; margin-top:4px;">Kirim Broadcast</button>
+                    </form>
+
+                    <h3 style="margin-top:10px;">Pengajuan Peran Pengurus</h3>
+                    <ul id="daftar-pengajuan-admin" class="daftar-anggota-admin" style="margin-top:4px;"><li>Belum ada pengajuan</li></ul>
+
+                    <h3 style="margin-top:10px;">Permintaan Hapus Akun</h3>
+                    <ul id="daftar-pengajuan-hapus-admin" class="daftar-anggota-admin" style="margin-top:4px;"><li>Belum ada pengajuan hapus</li></ul>
+
+                    <h3 style="margin-top:10px;">Log Hapus Akun</h3>
+                    <ul id="daftar-log-hapus-admin" class="daftar-anggota-admin" style="margin-top:4px;"><li>Belum ada log hapus</li></ul>
+                </div>
+
+                <div class="menu-profil" style="margin-top:10px;">
+                    <button type="button" id="btn-buka-hapus-ekstra" class="btn-hapus-inline" style="text-align:center;">Hapus Akun Permanen</button>
+                    <button type="button" id="btn-keluar" class="btn-bahaya">Keluar Akun</button>
+                </div>
+            </section>
+        </main>
+
+        <div id="modal-edit-profil" class="modal-popover">
+            <div class="konten-modal-gambar" style="max-width:320px; text-align:left;">
+                <button type="button" id="btn-tutup-edit-profil" class="btn-tutup-modal">&times;</button>
+                <h3>Edit Profil</h3>
+                <form id="form-edit-profil" enctype="multipart/form-data" style="margin-top:8px;">
+                    <label for="edit-nama">Nama Lengkap</label>
+                    <input type="text" id="edit-nama" name="nama" required>
+                    <label for="edit-email">Email</label>
+                    <input type="email" id="edit-email" name="email">
+                    <label for="edit-bio">Bio Profil</label>
+                    <textarea id="edit-bio" name="bio" rows="2" placeholder="Bio..."></textarea>
+                    <label for="edit-foto">Foto Profil Baru (Opsional)</label>
+                    <input type="file" id="edit-foto" name="foto_profil" accept="image/*">
+                    <button type="button" id="btn-hapus-foto-profil" class="btn-hapus-inline" style="display:none; text-align:left; margin-top:2px;">&times; Hapus Foto Profil</button>
+                    <label for="edit-password">Kata Sandi Baru (Opsional)</label>
+                    <input type="password" id="edit-password" name="password" placeholder="Sandi baru">
+                    <button type="submit" style="width:100%; margin-top:8px;">Simpan Perubahan</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="modal-pengajuan-peran" class="modal-popover">
+            <div class="konten-modal-gambar" style="max-width:300px; text-align:left;">
+                <button type="button" id="btn-tutup-pengajuan-peran" class="btn-tutup-modal">&times;</button>
+                <h3>Form Pengajuan Peran</h3>
+                <form id="form-pengajuan-peran" style="margin-top:8px;">
+                    <label for="pengajuan-peran">Peran Yang Diajukan</label>
+                    <select id="pengajuan-peran" required>
+                        <option value="bendahara">Bendahara Kas</option>
+                        <option value="sekretaris">Sekretaris Kelas</option>
+                        <option value="ketua">Ketua Kelas</option>
+                    </select>
+                    <label for="pengajuan-alasan">Alasan</label>
+                    <textarea id="pengajuan-alasan" rows="3" placeholder="Alasan..." required></textarea>
+                    <button type="submit" style="width:100%; margin-top:8px;">Kirim Pengajuan</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="modal-notifikasi" class="modal-popover">
+            <div class="konten-modal-gambar" style="max-width:320px; text-align:left;">
+                <button type="button" id="btn-tutup-notif" class="btn-tutup-modal">&times;</button>
+                <h3 style="margin-bottom:8px;">Pemberitahuan Akun</h3>
+                <ul id="daftar-notifikasi-list" style="list-style:none; display:flex; flex-direction:column; gap:6px; max-height:300px; overflow-y:auto;">
+                    <li style="font-size:0.8rem; text-align:center;">Tidak ada pemberitahuan</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="modal-preview-foto" class="modal-popover">
+            <div class="konten-modal-gambar">
+                <button type="button" id="btn-tutup-modal" class="btn-tutup-modal">&times;</button>
+                <h3>Pratinjau Nota Fisik</h3>
+                <img id="gambar-modal-nota" src="" alt="Pratinjau Nota">
+            </div>
+        </div>
+
+        <div id="modal-hapus-ekstra" class="modal-popover">
+            <div class="konten-modal-gambar" style="max-width:300px;">
+                <button type="button" id="btn-tutup-modal-hapus" class="btn-tutup-modal">&times;</button>
+                <h3 style="color:#cc0000;">Hapus Akun Permanen</h3>
+                <p style="font-size:0.8rem; margin-bottom:8px;">Verifikasi NIS dan Kata Sandi</p>
+                <form id="form-hapus-ekstra">
+                    <label for="hapus-nis">NIS</label>
+                    <input type="text" id="hapus-nis" required placeholder="NIS">
+                    <label for="hapus-password">Kata Sandi</label>
+                    <input type="password" id="hapus-password" required placeholder="Kata Sandi">
+                    <label for="hapus-alasan">Alasan Hapus</label>
+                    <textarea id="hapus-alasan" rows="2" placeholder="Alasan..." required></textarea>
+                    <button type="submit" class="btn-bahaya" style="width:100%; margin-top:8px;">Ajukan Hapus Akun</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="modal-profil-publik" class="modal-popover">
+            <div class="konten-modal-gambar" style="max-width:300px;">
+                <button type="button" id="btn-tutup-modal-publik" class="btn-tutup-modal">&times;</button>
+                <h3 id="modal-publik-nama" style="margin-top:6px;">Nama Siswa</h3>
+                <div id="modal-publik-role" class="lencana-peran" style="display:inline-block; margin-top:4px;">Visitor</div>
+                <p id="modal-publik-bio" style="font-size:0.85rem; margin-top:6px;">-</p>
+                <p id="modal-publik-poin" style="font-size:0.85rem; font-weight:bold; margin-top:4px;">Poin: 0 Pts</p>
+                <p id="modal-publik-dibuat" style="font-size:0.8rem; margin-top:6px;">Dibuat: -</p>
+            </div>
+        </div>
+
+        <nav id="navigasi-utama" class="navigasi-bawah" style="display:none;">
+            <button type="button" class="tombol-nav aktif" data-target="halaman-beranda">Beranda</button>
+            <button type="button" class="tombol-nav" data-target="halaman-uang-kas">Kas</button>
+            <button type="button" class="tombol-nav" data-target="halaman-input">Input</button>
+            <button type="button" class="tombol-nav" data-target="halaman-rekapan-kas">Rekapan</button>
+            <button type="button" class="tombol-nav" data-target="halaman-profil">Profil</button>
+        </nav>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
