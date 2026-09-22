@@ -13,6 +13,10 @@ const kasKeluarDetail = document.getElementById('kas-keluar-detail')
 const kasSaldo = document.getElementById('kas-saldo')
 const daftarKas = document.getElementById('daftar-transaksi-kas')
 const tabelKasWadah = document.getElementById('tabel-kas-wadah')
+const daftarPiketEl = document.getElementById('daftar-piket-hari-ini')
+const daftarInventarisEl = document.getElementById('daftar-inventaris-beranda')
+const formPiket = document.getElementById('form-piket')
+const formInventaris = document.getElementById('form-inventaris')
 
 const formMasuk = document.getElementById('form-masuk')
 const formDaftar = document.getElementById('form-daftar')
@@ -213,6 +217,10 @@ function perbaruiAksesVisual() {
     } else {
         if (panelAdmin) panelAdmin.style.display = 'none'
     }
+
+    const bolehKelolaKelas = penggunaAktif && ['admin', 'bendahara', 'ketua'].includes(penggunaAktif.role)
+    if (formPiket) formPiket.style.display = bolehKelolaKelas ? 'block' : 'none'
+    if (formInventaris) formInventaris.style.display = bolehKelolaKelas ? 'block' : 'none'
 }
 
 function perbaruiAkses() {
@@ -867,6 +875,40 @@ btnTindakanList.forEach(btn => {
     })
 })
 
+async function muatPiket() {
+    if (!daftarPiketEl) return
+    try {
+        const respon = await fetch('/api/piket')
+        const hasil = await respon.json()
+        if (hasil.status === 'success' && Array.isArray(hasil.data) && hasil.data.length > 0) {
+            daftarPiketEl.innerHTML = hasil.data.map(item => `
+                <li><strong>${item.hari}:</strong> ${item.nama} — ${item.tugas}</li>
+            `).join('')
+        } else {
+            daftarPiketEl.innerHTML = '<li>Belum ada jadwal piket</li>'
+        }
+    } catch (err) {
+        daftarPiketEl.innerHTML = '<li>Gagal memuat jadwal piket</li>'
+    }
+}
+
+async function muatInventaris() {
+    if (!daftarInventarisEl) return
+    try {
+        const respon = await fetch('/api/inventaris')
+        const hasil = await respon.json()
+        if (hasil.status === 'success' && Array.isArray(hasil.data) && hasil.data.length > 0) {
+            daftarInventarisEl.innerHTML = hasil.data.map(item => `
+                <li><strong>${item.nama_barang}</strong>: ${item.kondisi} (${item.jumlah} unit)${item.keterangan ? ` — ${item.keterangan}` : ''}</li>
+            `).join('')
+        } else {
+            daftarInventarisEl.innerHTML = '<li>Belum ada data inventaris</li>'
+        }
+    } catch (err) {
+        daftarInventarisEl.innerHTML = '<li>Gagal memuat inventaris</li>'
+    }
+}
+
 async function ambilKas() {
     try {
         const respon = await fetch('/api/kas')
@@ -884,6 +926,73 @@ async function ambilKas() {
     } catch (err) {
         console.error('Gagal mengambil data kas:', err)
     }
+}
+
+if (formPiket) {
+    formPiket.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        if (!penggunaAktif || !['admin', 'bendahara', 'ketua'].includes(penggunaAktif.role)) {
+            alert('Akses ditolak: hanya pengurus yang bisa mengelola piket')
+            return
+        }
+
+        const payload = {
+            hari: document.getElementById('piket-hari').value,
+            nama: document.getElementById('piket-nama').value,
+            tugas: document.getElementById('piket-tugas').value
+        }
+
+        try {
+            const respon = await fetch('/api/piket', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            const hasil = await respon.json()
+            if (hasil.status === 'success') {
+                formPiket.reset()
+                muatPiket()
+            } else {
+                alert('Gagal: ' + hasil.message)
+            }
+        } catch (err) {
+            alert('Kesalahan koneksi ke server')
+        }
+    })
+}
+
+if (formInventaris) {
+    formInventaris.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        if (!penggunaAktif || !['admin', 'bendahara', 'ketua'].includes(penggunaAktif.role)) {
+            alert('Akses ditolak: hanya pengurus yang bisa mengelola inventaris')
+            return
+        }
+
+        const payload = {
+            nama_barang: document.getElementById('inventaris-nama').value,
+            kondisi: document.getElementById('inventaris-kondisi').value,
+            jumlah: document.getElementById('inventaris-jumlah').value,
+            keterangan: document.getElementById('inventaris-keterangan').value
+        }
+
+        try {
+            const respon = await fetch('/api/inventaris', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            const hasil = await respon.json()
+            if (hasil.status === 'success') {
+                formInventaris.reset()
+                muatInventaris()
+            } else {
+                alert('Gagal: ' + hasil.message)
+            }
+        } catch (err) {
+            alert('Kesalahan koneksi ke server')
+        }
+    })
 }
 
 function tampilKas(riwayat) {
@@ -1223,5 +1332,14 @@ btnDemoList.forEach(btn => {
     })
 })
 
-if (penggunaAktif) { perbaruiAkses(); gantiHalaman('halaman-beranda'); ambilKas() }
-else { perbaruiAkses() }
+if (penggunaAktif) {
+    perbaruiAkses()
+    gantiHalaman('halaman-beranda')
+    ambilKas()
+    muatPiket()
+    muatInventaris()
+} else {
+    perbaruiAkses()
+    muatPiket()
+    muatInventaris()
+}

@@ -96,11 +96,44 @@
                 </div>
                 <section class="blok-kontainer">
                     <h3>Piket Kebersihan</h3>
-                    <ul id="daftar-piket-hari-ini" class="daftar-item-beranda"><li>Senin: Adzan, Safa, Nauval</li></ul>
+                    <ul id="daftar-piket-hari-ini" class="daftar-item-beranda"><li>Memuat jadwal piket...</li></ul>
+                    <form id="form-piket" style="margin-top:10px; display:none;">
+                        <label for="piket-hari">Hari</label>
+                        <select id="piket-hari" name="hari">
+                            <option value="Senin">Senin</option>
+                            <option value="Selasa">Selasa</option>
+                            <option value="Rabu">Rabu</option>
+                            <option value="Kamis">Kamis</option>
+                            <option value="Jumat">Jumat</option>
+                            <option value="Sabtu">Sabtu</option>
+                            <option value="Minggu">Minggu</option>
+                        </select>
+                        <label for="piket-nama">Nama Petugas</label>
+                        <input type="text" id="piket-nama" name="nama" placeholder="Nama petugas" required>
+                        <label for="piket-tugas">Tugas</label>
+                        <input type="text" id="piket-tugas" name="tugas" placeholder="Contoh: membersihkan papan, mengecek lantai" required>
+                        <button type="submit" style="margin-top:8px;">Simpan Jadwal Piket</button>
+                    </form>
                 </section>
                 <section class="blok-kontainer">
                     <h3>Inventaris Kelas</h3>
-                    <ul id="daftar-inventaris-beranda" class="daftar-item-beranda"><li>Proyektor TU: Tersedia</li></ul>
+                    <ul id="daftar-inventaris-beranda" class="daftar-item-beranda"><li>Memuat inventaris...</li></ul>
+                    <form id="form-inventaris" style="margin-top:10px; display:none;">
+                        <label for="inventaris-nama">Nama Barang</label>
+                        <input type="text" id="inventaris-nama" name="nama_barang" placeholder="Nama barang" required>
+                        <label for="inventaris-kondisi">Kondisi</label>
+                        <select id="inventaris-kondisi" name="kondisi">
+                            <option value="Tersedia">Tersedia</option>
+                            <option value="Dipinjam">Dipinjam</option>
+                            <option value="Rusak">Rusak</option>
+                            <option value="Hilang">Hilang</option>
+                        </select>
+                        <label for="inventaris-jumlah">Jumlah</label>
+                        <input type="number" id="inventaris-jumlah" name="jumlah" min="1" value="1" required>
+                        <label for="inventaris-keterangan">Keterangan</label>
+                        <textarea id="inventaris-keterangan" name="keterangan" rows="2" placeholder="Keterangan tambahan..."></textarea>
+                        <button type="submit" style="margin-top:8px;">Simpan Inventaris</button>
+                    </form>
                 </section>
                 <div class="area-tombol-tindakan-beranda">
                     <div class="baris-tombol-dua">

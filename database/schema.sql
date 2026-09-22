@@ -114,7 +114,24 @@ CREATE TABLE tb_reaksi_kas (
     tipe_reaksi VARCHAR(20) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY reaksi_unik (kas_id, siswa_nis),
-    FOREIGN KEY (kas_id) REFERENCES tb_siswa(nis) ON DELETE CASCADE
+    FOREIGN KEY (kas_id) REFERENCES tb_kas(id) ON DELETE CASCADE
+);
+
+CREATE TABLE tb_piket (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    hari VARCHAR(20) NOT NULL,
+    nama VARCHAR(100) NOT NULL,
+    tugas TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE tb_inventaris (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nama_barang VARCHAR(150) NOT NULL,
+    kondisi VARCHAR(50) NOT NULL DEFAULT 'Tersedia',
+    jumlah INT NOT NULL DEFAULT 1,
+    keterangan TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 INSERT INTO tb_siswa (nis, nama, email, password, jenis_kelamin, role, status, bio, poin) VALUES

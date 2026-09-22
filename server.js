@@ -207,6 +207,45 @@ async function inisialisasiTabel() {
             `)
         } catch (e) {}
 
+        try {
+            await db.query(`
+                CREATE TABLE IF NOT EXISTS tb_piket (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    hari VARCHAR(20) NOT NULL,
+                    nama VARCHAR(100) NOT NULL,
+                    tugas TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `)
+        } catch (e) {}
+
+        try {
+            await db.query(`
+                CREATE TABLE IF NOT EXISTS tb_inventaris (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    nama_barang VARCHAR(150) NOT NULL,
+                    kondisi VARCHAR(50) NOT NULL DEFAULT 'Tersedia',
+                    jumlah INT NOT NULL DEFAULT 1,
+                    keterangan TEXT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `)
+        } catch (e) {}
+
+        try {
+            const [deskripsi] = await db.query('SHOW CREATE TABLE tb_reaksi_kas')
+            const createSql = deskripsi[0]['Create Table'] || ''
+            if (createSql.includes('REFERENCES `tb_siswa`') || createSql.includes('REFERENCES tb_siswa')) {
+                const [fkRows] = await db.query("SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tb_reaksi_kas' AND REFERENCED_TABLE_NAME IS NOT NULL")
+                for (const fk of fkRows) {
+                    await db.query(`ALTER TABLE tb_reaksi_kas DROP FOREIGN KEY \`${fk.CONSTRAINT_NAME}\``)
+                }
+                try { await db.query('ALTER TABLE tb_reaksi_kas DROP INDEX reaksi_unik') } catch (e) {}
+                await db.query('ALTER TABLE tb_reaksi_kas ADD CONSTRAINT fk_reaksi_kas_kas FOREIGN KEY (kas_id) REFERENCES tb_kas(id) ON DELETE CASCADE')
+                await db.query('ALTER TABLE tb_reaksi_kas ADD UNIQUE KEY reaksi_unik (kas_id, siswa_nis)')
+            }
+        } catch (e) {}
+
         const daftarSiswa = [
             ['202523180', 'Adelia Khairunissa Tofari', 'adelia@smkn1jakarta.sch.id', '123456', 'P', 'bendahara', 'aktif', 'Bendahara Kas XI RPL', 15],
             ['202523181', 'Adilah Hammam Akram', 'adilah@smkn1jakarta.sch.id', '123456', 'L', 'siswa', 'aktif', 'Siswa XI RPL SMKN 1 Jakarta', 5],
@@ -475,6 +514,52 @@ app.get('/api/log-aktivitas/:nis', async (req, res) => {
         res.json({ status: 'success', data: listAktivitas })
     } catch (err) {
         res.status(500).json({ status: 'error', message: err.message })
+    }
+})
+
+app.get('/api/piket', async (req, res) => {
+    try {
+        const [data] = await db.query("SELECT * FROM tb_piket ORDER BY FIELD(hari, 'Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'), created_at ASC")
+        res.json({ status: 'success', data })
+    } catch (err) {
+        res.status(503).json({ status: 'error', message: err.code === 'ECONNREFUSED' ? 'Database MySQL belum aktif' : err.message })
+    }
+})
+
+app.post('/api/piket', async (req, res) => {
+    try {
+        const { hari, nama, tugas } = req.body
+        if (!hari || !nama || !tugas) {
+            return res.status(400).json({ status: 'error', message: 'Hari, nama piket, dan tugas wajib diisi' })
+        }
+
+        await db.query('INSERT INTO tb_piket (hari, nama, tugas) VALUES (?, ?, ?)', [hari, nama, tugas])
+        res.json({ status: 'success', message: 'Jadwal piket berhasil disimpan' })
+    } catch (err) {
+        res.status(503).json({ status: 'error', message: err.code === 'ECONNREFUSED' ? 'Database MySQL belum aktif' : err.message })
+    }
+})
+
+app.get('/api/inventaris', async (req, res) => {
+    try {
+        const [data] = await db.query('SELECT * FROM tb_inventaris ORDER BY nama_barang ASC')
+        res.json({ status: 'success', data })
+    } catch (err) {
+        res.status(503).json({ status: 'error', message: err.code === 'ECONNREFUSED' ? 'Database MySQL belum aktif' : err.message })
+    }
+})
+
+app.post('/api/inventaris', async (req, res) => {
+    try {
+        const { nama_barang, kondisi, jumlah, keterangan } = req.body
+        if (!nama_barang || !kondisi) {
+            return res.status(400).json({ status: 'error', message: 'Nama barang dan kondisi wajib diisi' })
+        }
+
+        await db.query('INSERT INTO tb_inventaris (nama_barang, kondisi, jumlah, keterangan) VALUES (?, ?, ?, ?)', [nama_barang, kondisi, Number(jumlah) || 1, keterangan || null])
+        res.json({ status: 'success', message: 'Inventaris berhasil disimpan' })
+    } catch (err) {
+        res.status(503).json({ status: 'error', message: err.code === 'ECONNREFUSED' ? 'Database MySQL belum aktif' : err.message })
     }
 })
 
@@ -998,10 +1083,11 @@ app.post('/api/anggota/peran', async (req, res) => {
 
 async function testDatabaseConnection() {
     try {
+        await db.query('SELECT 1')
         await inisialisasiTabel()
         console.log('Berhasil terhubung ke database MySQL (classhub_db)')
     } catch (err) {
-        console.error('Gagal terhubung ke database MySQL:', err.message)
+        console.error('Gagal terhubung ke database MySQL:', err.code || err.message)
     }
 }
 
