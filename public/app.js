@@ -14,8 +14,14 @@ const kasSaldo = document.getElementById('kas-saldo')
 const daftarKas = document.getElementById('daftar-transaksi-kas')
 const tabelKasWadah = document.getElementById('tabel-kas-wadah')
 const daftarPiketEl = document.getElementById('daftar-piket-hari-ini')
+const tabelPiketBody = document.getElementById('tbody-piket')
 const daftarInventarisEl = document.getElementById('daftar-inventaris-beranda')
 const formPiket = document.getElementById('form-piket')
+const inputPiketTanggal = document.getElementById('piket-tanggal')
+const selectPiketHari = document.getElementById('piket-hari')
+const piketPetugasList = document.getElementById('piket-petugas-list')
+const btnSubmitPiket = document.getElementById('btn-submit-piket')
+const btnBatalEditPiket = document.getElementById('btn-batal-edit-piket')
 const formInventaris = document.getElementById('form-inventaris')
 
 const formMasuk = document.getElementById('form-masuk')
@@ -115,6 +121,14 @@ function formatDurasiTeks(totalDetik) {
     const min = Math.floor(totalDetik / 60)
     const sec = totalDetik % 60
     return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+}
+
+function getNamaHari(tanggalString) {
+    if (!tanggalString) return ''
+    const tanggal = new Date(tanggalString + 'T00:00:00')
+    if (Number.isNaN(tanggal.getTime())) return ''
+    const namaHari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+    return namaHari[tanggal.getDay()]
 }
 
 function gantiHalaman(targetId) {
@@ -218,7 +232,11 @@ function perbaruiAksesVisual() {
         if (panelAdmin) panelAdmin.style.display = 'none'
     }
 
-    const bolehKelolaKelas = penggunaAktif && ['admin', 'bendahara', 'ketua'].includes(penggunaAktif.role)
+    if (penggunaAktif.role === 'admin' || penggunaAktif.role === 'ketua') {
+        isiPilihanPetugasPiket()
+    }
+
+    const bolehKelolaKelas = penggunaAktif && ['admin', 'ketua'].includes(penggunaAktif.role)
     if (formPiket) formPiket.style.display = bolehKelolaKelas ? 'block' : 'none'
     if (formInventaris) formInventaris.style.display = bolehKelolaKelas ? 'block' : 'none'
 }
@@ -672,12 +690,39 @@ function tampilAnggota(daftar) {
                             <option value="admin" ${item.role === 'admin' ? 'selected' : ''}>Admin</option>
                             <option value="visitor" ${item.role === 'visitor' ? 'selected' : ''}>Visitor</option>
                         </select>
+                        <button type="button" class="btn-aksi-admin" onclick="resetPasswordSiswa('${item.nis}', '${item.nama.replace(/'/g, "\\'")}')">Reset Password</button>
                     </div>
                 ` : `<span class="lencana-peran">${item.role}</span>`}
                 ${item.status === 'pending' ? `<button type="button" class="btn-aksi-admin" onclick="setujuiAkun('${item.nis}')">Setujui</button>` : ''}
             </div>
         </li>
     `).join('')
+}
+
+window.resetPasswordSiswa = async function(nis, nama) {
+    if (!penggunaAktif || penggunaAktif.role !== 'admin') {
+        alert('Hanya Admin yang dapat mereset password')
+        return
+    }
+
+    const passwordBaru = prompt(`Masukkan password sementara untuk ${nama} (minimal 6 karakter):`)
+    if (passwordBaru === null) return
+    if (passwordBaru.trim().length < 6) {
+        alert('Password baru minimal 6 karakter')
+        return
+    }
+
+    try {
+        const respon = await fetch('/api/anggota/reset-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admin_nis: penggunaAktif.nis, target_nis: nis, password_baru: passwordBaru })
+        })
+        const hasil = await respon.json()
+        alert(hasil.message)
+    } catch (err) {
+        alert('Kesalahan koneksi server')
+    }
 }
 
 window.ubahRoleSiswaDirect = async function(nis, peranBaru) {
@@ -875,20 +920,86 @@ btnTindakanList.forEach(btn => {
     })
 })
 
+let modeEditPiketId = null
+
+function formatTanggalPiket(tanggal) {
+    if (!tanggal) return '-'
+    return String(tanggal).slice(0, 10)
+}
+
+function resetFormPiket() {
+    modeEditPiketId = null
+    formPiket.reset()
+    if (btnSubmitPiket) btnSubmitPiket.textContent = 'Simpan Jadwal Piket'
+    if (btnBatalEditPiket) btnBatalEditPiket.style.display = 'none'
+    document.querySelectorAll('#piket-petugas-list input[name="petugas-piket"]').forEach(cb => cb.checked = false)
+}
+
+function renderPiketTable(data) {
+    if (!tabelPiketBody) return
+
+    if (!Array.isArray(data) || data.length === 0) {
+        tabelPiketBody.innerHTML = '<tr><td colspan="4" style="padding:12px; color:var(--clr-text-muted); text-align:center;">Belum ada jadwal piket</td></tr>'
+        return
+    }
+
+    tabelPiketBody.innerHTML = data.map(item => `
+        <tr>
+            <td style="padding:10px 12px;">${formatTanggalPiket(item.tanggal)}</td>
+            <td style="padding:10px 12px;">${item.hari || '-'}</td>
+            <td style="padding:10px 12px;">${Array.isArray(item.petugas) && item.petugas.length ? item.petugas.join(', ') : 'Belum ada petugas'}</td>
+            <td style="padding:10px 12px; text-align:center;">
+                <div style="display:flex; justify-content:center; gap:6px; flex-wrap:wrap;">
+                    <button type="button" onclick="editPiket(${item.id})">Edit</button>
+                    <button type="button" class="btn-danger" onclick="hapusPiket(${item.id})">Hapus</button>
+                </div>
+            </td>
+        </tr>
+    `).join('')
+}
+
 async function muatPiket() {
-    if (!daftarPiketEl) return
+    if (!daftarPiketEl && !tabelPiketBody) return
     try {
         const respon = await fetch('/api/piket')
         const hasil = await respon.json()
         if (hasil.status === 'success' && Array.isArray(hasil.data) && hasil.data.length > 0) {
-            daftarPiketEl.innerHTML = hasil.data.map(item => `
-                <li><strong>${item.hari}:</strong> ${item.nama} — ${item.tugas}</li>
-            `).join('')
+            if (daftarPiketEl) {
+                daftarPiketEl.innerHTML = hasil.data.map(item => `
+                    <li><strong>${item.hari}, ${formatTanggalPiket(item.tanggal)}:</strong> ${Array.isArray(item.petugas) && item.petugas.length ? item.petugas.join(', ') : 'Belum ada petugas'}</li>
+                `).join('')
+            }
+            renderPiketTable(hasil.data)
         } else {
-            daftarPiketEl.innerHTML = '<li>Belum ada jadwal piket</li>'
+            if (daftarPiketEl) daftarPiketEl.innerHTML = '<li>Belum ada jadwal piket</li>'
+            renderPiketTable([])
         }
     } catch (err) {
-        daftarPiketEl.innerHTML = '<li>Gagal memuat jadwal piket</li>'
+        if (daftarPiketEl) daftarPiketEl.innerHTML = '<li>Gagal memuat jadwal piket</li>'
+        renderPiketTable([])
+    }
+}
+
+async function isiPilihanPetugasPiket() {
+    if (!piketPetugasList) return
+
+    try {
+        const respon = await fetch('/api/anggota')
+        const hasil = await respon.json()
+        if (hasil.status !== 'success' || !Array.isArray(hasil.data)) return
+
+        const daftarSiswa = hasil.data
+            .filter(item => item.status === 'aktif')
+            .sort((a, b) => a.nama.localeCompare(b.nama))
+
+        piketPetugasList.innerHTML = daftarSiswa.map(item => `
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" name="petugas-piket" value="${item.nis}">
+                <span>${item.nama} (${item.nis})</span>
+            </label>
+        `).join('')
+    } catch (err) {
+        piketPetugasList.innerHTML = '<div style="color:#b91c1c;">Gagal memuat daftar siswa</div>'
     }
 }
 
@@ -915,9 +1026,9 @@ async function ambilKas() {
         const hasil = await respon.json()
         if (hasil.status === 'success') {
             const dataKas = hasil.data
-            berandaSaldo.textContent = formatRupiah(dataKas.saldo)
-            berandaMasuk.textContent = formatRupiah(dataKas.total_masuk)
-            berandaKeluar.textContent = formatRupiah(dataKas.total_keluar)
+            if (berandaSaldo) berandaSaldo.textContent = formatRupiah(dataKas.saldo)
+            if (berandaMasuk) berandaMasuk.textContent = formatRupiah(dataKas.total_masuk)
+            if (berandaKeluar) berandaKeluar.textContent = formatRupiah(dataKas.total_keluar)
             if (kasMasukDetail) kasMasukDetail.textContent = formatRupiah(dataKas.total_masuk)
             if (kasKeluarDetail) kasKeluarDetail.textContent = formatRupiah(dataKas.total_keluar)
             kasSaldo.textContent = formatRupiah(dataKas.saldo)
@@ -928,30 +1039,99 @@ async function ambilKas() {
     }
 }
 
+if (inputPiketTanggal && selectPiketHari) {
+    inputPiketTanggal.addEventListener('change', () => {
+        const hariBaru = getNamaHari(inputPiketTanggal.value)
+        if (hariBaru) {
+            selectPiketHari.value = hariBaru
+        }
+    })
+}
+
+window.editPiket = async function(id) {
+    try {
+        const respon = await fetch('/api/piket')
+        const hasil = await respon.json()
+        if (hasil.status !== 'success' || !Array.isArray(hasil.data)) return
+
+        const item = hasil.data.find(entry => Number(entry.id) === Number(id))
+        if (!item) return
+
+        modeEditPiketId = Number(id)
+        inputPiketTanggal.value = item.tanggal || ''
+        selectPiketHari.value = item.hari || 'Senin'
+
+        document.querySelectorAll('#piket-petugas-list input[name="petugas-piket"]').forEach(cb => {
+            cb.checked = Array.isArray(item.petugasNis) && item.petugasNis.includes(cb.value)
+        })
+
+        if (btnSubmitPiket) btnSubmitPiket.textContent = 'Update Jadwal Piket'
+        if (btnBatalEditPiket) btnBatalEditPiket.style.display = 'inline-block'
+        formPiket.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } catch (err) {
+        alert('Gagal membuka form edit jadwal piket')
+    }
+}
+
+window.hapusPiket = async function(id) {
+    if (!confirm('Apakah Anda yakin ingin menghapus jadwal piket ini?')) return
+
+    try {
+        const respon = await fetch(`/api/piket/${id}`, { method: 'DELETE' })
+        const hasil = await respon.json()
+        if (hasil.status === 'success') {
+            await muatPiket()
+            if (modeEditPiketId === Number(id)) resetFormPiket()
+        } else {
+            alert('Gagal: ' + hasil.message)
+        }
+    } catch (err) {
+        alert('Kesalahan koneksi ke server')
+    }
+}
+
+if (btnBatalEditPiket) {
+    btnBatalEditPiket.addEventListener('click', () => {
+        resetFormPiket()
+    })
+}
+
 if (formPiket) {
     formPiket.addEventListener('submit', async (e) => {
         e.preventDefault()
-        if (!penggunaAktif || !['admin', 'bendahara', 'ketua'].includes(penggunaAktif.role)) {
-            alert('Akses ditolak: hanya pengurus yang bisa mengelola piket')
+        if (!penggunaAktif || !['admin', 'ketua'].includes(penggunaAktif.role)) {
+            alert('Akses ditolak: hanya admin dan petugas kelas yang bisa mengelola piket')
+            return
+        }
+
+        const petugasTerpilih = Array.from(document.querySelectorAll('#piket-petugas-list input[name="petugas-piket"]:checked')).map(input => input.value)
+
+        if (!inputPiketTanggal.value || !selectPiketHari.value || petugasTerpilih.length === 0) {
+            alert('Tanggal, hari pelaksanaan, dan minimal satu petugas piket wajib diisi')
             return
         }
 
         const payload = {
-            hari: document.getElementById('piket-hari').value,
-            nama: document.getElementById('piket-nama').value,
-            tugas: document.getElementById('piket-tugas').value
+            tanggal: inputPiketTanggal.value,
+            hari: selectPiketHari.value,
+            petugas: petugasTerpilih
         }
 
         try {
-            const respon = await fetch('/api/piket', {
-                method: 'POST',
+            const endpoint = modeEditPiketId ? `/api/piket/${modeEditPiketId}` : '/api/piket'
+            const method = modeEditPiketId ? 'PUT' : 'POST'
+            const respon = await fetch(endpoint, {
+                method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             })
             const hasil = await respon.json()
             if (hasil.status === 'success') {
-                formPiket.reset()
-                muatPiket()
+                resetFormPiket()
+                const hariDefault = getNamaHari(new Date().toISOString().slice(0, 10))
+                if (hariDefault) selectPiketHari.value = hariDefault
+                await isiPilihanPetugasPiket()
+                await muatPiket()
             } else {
                 alert('Gagal: ' + hasil.message)
             }
@@ -1273,6 +1453,31 @@ if (formDaftar) {
                 gantiHalaman('halaman-masuk')
             } else { alert('Gagal daftar: ' + hasil.message) }
         } catch (err) { alert('Terjadi kesalahan koneksi server: ' + err.message) }
+    })
+}
+
+const formLupaSandi = document.getElementById('form-lupa-sandi')
+if (formLupaSandi) {
+    formLupaSandi.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        const idAkun = document.getElementById('lupa-email').value.trim()
+        try {
+            const respon = await fetch('/api/permintaan-reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idAkun })
+            })
+            const hasil = await respon.json()
+            if (hasil.status === 'success') {
+                alert(hasil.message)
+                formLupaSandi.reset()
+                gantiHalaman('halaman-masuk')
+            } else {
+                alert('Gagal: ' + hasil.message)
+            }
+        } catch (err) {
+            alert('Kesalahan koneksi server')
+        }
     })
 }
 

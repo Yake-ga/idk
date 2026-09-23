@@ -108,6 +108,19 @@ async function inisialisasiTabel() {
 
         try {
             await db.query(`
+                CREATE TABLE IF NOT EXISTS tb_pengajuan_reset_password (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    siswa_nis VARCHAR(20) NOT NULL,
+                    nama VARCHAR(100) NOT NULL,
+                    status ENUM('pending', 'selesai') DEFAULT 'pending',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (siswa_nis) REFERENCES tb_siswa(nis) ON DELETE CASCADE
+                )
+            `)
+        } catch (e) {}
+
+        try {
+            await db.query(`
                 CREATE TABLE IF NOT EXISTS tb_log_hapus (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     nis VARCHAR(20) NOT NULL,
@@ -208,13 +221,31 @@ async function inisialisasiTabel() {
         } catch (e) {}
 
         try {
+            const [columnsPiket] = await db.query('SHOW COLUMNS FROM tb_piket')
+            const punyaKolomLama = columnsPiket.some(col => col.Field === 'nama' || col.Field === 'tugas')
+            const punyaTanggal = columnsPiket.some(col => col.Field === 'tanggal')
+
+            if (!columnsPiket.length || punyaKolomLama || !punyaTanggal) {
+                await db.query('DROP TABLE IF EXISTS tb_piket_petugas')
+                await db.query('DROP TABLE IF EXISTS tb_piket')
+            }
+
             await db.query(`
                 CREATE TABLE IF NOT EXISTS tb_piket (
                     id INT AUTO_INCREMENT PRIMARY KEY,
+                    tanggal DATE NOT NULL UNIQUE,
                     hari VARCHAR(20) NOT NULL,
-                    nama VARCHAR(100) NOT NULL,
-                    tugas TEXT NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `)
+            await db.query(`
+                CREATE TABLE IF NOT EXISTS tb_piket_petugas (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    piket_id INT NOT NULL,
+                    siswa_nis VARCHAR(20) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE KEY piket_petugas_unik (piket_id, siswa_nis),
+                    FOREIGN KEY (piket_id) REFERENCES tb_piket(id) ON DELETE CASCADE
                 )
             `)
         } catch (e) {}
@@ -385,6 +416,29 @@ app.post('/api/login', async (req, res) => {
     }
 })
 
+app.post('/api/permintaan-reset-password', async (req, res) => {
+    try {
+        const idAkun = String(req.body.idAkun || '').trim()
+        if (!idAkun) {
+            return res.status(400).json({ status: 'error', message: 'NIS atau email wajib diisi' })
+        }
+
+        const [siswaRows] = await db.query('SELECT nis, nama FROM tb_siswa WHERE nis = ? OR email = ?', [idAkun, idAkun])
+        if (siswaRows.length > 0) {
+            const siswa = siswaRows[0]
+            const [permintaanAktif] = await db.query("SELECT id FROM tb_pengajuan_reset_password WHERE siswa_nis = ? AND status = 'pending' LIMIT 1", [siswa.nis])
+            if (permintaanAktif.length === 0) {
+                await db.query('INSERT INTO tb_pengajuan_reset_password (siswa_nis, nama) VALUES (?, ?)', [siswa.nis, siswa.nama])
+                await notifikasiKastaAtas('Permintaan Reset Password', `Siswa ${siswa.nama} (${siswa.nis}) meminta reset password. Silakan buka panel anggota untuk membuat password sementara.`)
+            }
+        }
+
+        res.json({ status: 'success', message: 'Permintaan reset sudah dicatat. Silakan hubungi Admin kelas untuk mendapatkan password sementara.' })
+    } catch (err) {
+        res.status(500).json({ status: 'error', message: 'Gagal mengirim permintaan reset: ' + err.message })
+    }
+})
+
 app.post('/api/register', async (req, res) => {
     try {
         const { nis, nama, email, password, jenis_kelamin } = req.body
@@ -519,7 +573,26 @@ app.get('/api/log-aktivitas/:nis', async (req, res) => {
 
 app.get('/api/piket', async (req, res) => {
     try {
-        const [data] = await db.query("SELECT * FROM tb_piket ORDER BY FIELD(hari, 'Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'), created_at ASC")
+        const [rows] = await db.query("SELECT id, DATE_FORMAT(tanggal, '%Y-%m-%d') AS tanggal, hari, created_at FROM tb_piket ORDER BY tanggal ASC, created_at ASC")
+        const data = []
+
+        for (const item of rows) {
+            const [petugasRows] = await db.query(
+                `SELECT pp.siswa_nis, s.nama
+                 FROM tb_piket_petugas pp
+                 LEFT JOIN tb_siswa s ON s.nis = pp.siswa_nis
+                 WHERE pp.piket_id = ?
+                 ORDER BY s.nama ASC`,
+                [item.id]
+            )
+
+            data.push({
+                ...item,
+                petugas: petugasRows.map(row => row.nama || row.siswa_nis),
+                petugasNis: petugasRows.map(row => row.siswa_nis)
+            })
+        }
+
         res.json({ status: 'success', data })
     } catch (err) {
         res.status(503).json({ status: 'error', message: err.code === 'ECONNREFUSED' ? 'Database MySQL belum aktif' : err.message })
@@ -528,13 +601,88 @@ app.get('/api/piket', async (req, res) => {
 
 app.post('/api/piket', async (req, res) => {
     try {
-        const { hari, nama, tugas } = req.body
-        if (!hari || !nama || !tugas) {
-            return res.status(400).json({ status: 'error', message: 'Hari, nama piket, dan tugas wajib diisi' })
+        const { tanggal, hari, petugas } = req.body
+        const daftarPetugas = Array.isArray(petugas) ? petugas : (petugas ? String(petugas).split(',') : [])
+        const petugasBersih = daftarPetugas.map(item => String(item).trim()).filter(Boolean)
+
+        if (!tanggal || !hari || petugasBersih.length === 0) {
+            return res.status(400).json({ status: 'error', message: 'Tanggal, hari pelaksanaan, dan minimal satu petugas piket wajib diisi' })
         }
 
-        await db.query('INSERT INTO tb_piket (hari, nama, tugas) VALUES (?, ?, ?)', [hari, nama, tugas])
+        let [piketRow] = await db.query('SELECT id FROM tb_piket WHERE tanggal = ?', [tanggal])
+
+        let piketId
+        if (piketRow.length > 0) {
+            piketId = piketRow[0].id
+            await db.query('UPDATE tb_piket SET hari = ? WHERE id = ?', [hari, piketId])
+        } else {
+            const hasilInsert = await db.query('INSERT INTO tb_piket (tanggal, hari) VALUES (?, ?)', [tanggal, hari])
+            piketId = hasilInsert[0].insertId
+        }
+
+        await db.query('DELETE FROM tb_piket_petugas WHERE piket_id = ?', [piketId])
+
+        for (const nisPetugas of petugasBersih) {
+            const [cekSiswa] = await db.query('SELECT nis FROM tb_siswa WHERE nis = ?', [nisPetugas])
+            if (cekSiswa.length > 0) {
+                await db.query('INSERT INTO tb_piket_petugas (piket_id, siswa_nis) VALUES (?, ?)', [piketId, nisPetugas])
+            }
+        }
+
         res.json({ status: 'success', message: 'Jadwal piket berhasil disimpan' })
+    } catch (err) {
+        res.status(503).json({ status: 'error', message: err.code === 'ECONNREFUSED' ? 'Database MySQL belum aktif' : err.message })
+    }
+})
+
+app.put('/api/piket/:id', async (req, res) => {
+    try {
+        const { id } = req.params
+        const { tanggal, hari, petugas } = req.body
+        const daftarPetugas = Array.isArray(petugas) ? petugas : (petugas ? String(petugas).split(',') : [])
+        const petugasBersih = daftarPetugas.map(item => String(item).trim()).filter(Boolean)
+
+        if (!id || !tanggal || !hari || petugasBersih.length === 0) {
+            return res.status(400).json({ status: 'error', message: 'Tanggal, hari pelaksanaan, dan minimal satu petugas piket wajib diisi' })
+        }
+
+        const [cekPiket] = await db.query('SELECT id FROM tb_piket WHERE id = ?', [id])
+        if (cekPiket.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Jadwal piket tidak ditemukan' })
+        }
+
+        await db.query('UPDATE tb_piket SET tanggal = ?, hari = ? WHERE id = ?', [tanggal, hari, id])
+        await db.query('DELETE FROM tb_piket_petugas WHERE piket_id = ?', [id])
+
+        for (const nisPetugas of petugasBersih) {
+            const [cekSiswa] = await db.query('SELECT nis FROM tb_siswa WHERE nis = ?', [nisPetugas])
+            if (cekSiswa.length > 0) {
+                await db.query('INSERT INTO tb_piket_petugas (piket_id, siswa_nis) VALUES (?, ?)', [id, nisPetugas])
+            }
+        }
+
+        res.json({ status: 'success', message: 'Jadwal piket berhasil diperbarui' })
+    } catch (err) {
+        res.status(503).json({ status: 'error', message: err.code === 'ECONNREFUSED' ? 'Database MySQL belum aktif' : err.message })
+    }
+})
+
+app.delete('/api/piket/:id', async (req, res) => {
+    try {
+        const { id } = req.params
+        if (!id) {
+            return res.status(400).json({ status: 'error', message: 'ID jadwal piket wajib ada' })
+        }
+
+        const [cekPiket] = await db.query('SELECT id FROM tb_piket WHERE id = ?', [id])
+        if (cekPiket.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Jadwal piket tidak ditemukan' })
+        }
+
+        await db.query('DELETE FROM tb_piket_petugas WHERE piket_id = ?', [id])
+        await db.query('DELETE FROM tb_piket WHERE id = ?', [id])
+
+        res.json({ status: 'success', message: 'Jadwal piket berhasil dihapus' })
     } catch (err) {
         res.status(503).json({ status: 'error', message: err.code === 'ECONNREFUSED' ? 'Database MySQL belum aktif' : err.message })
     }
@@ -615,7 +763,7 @@ app.put('/api/siswa/profil/:nis', uploadFile.single('foto_profil'), async (req, 
 
         if (password && password.trim().length > 0) {
             queryEdit += ', password = ?'
-            parameterEdit.push(password.trim())
+            parameterEdit.push(await hashPassword(password.trim()))
         }
 
         queryEdit += ' WHERE nis = ?'
@@ -656,8 +804,8 @@ app.post('/api/siswa/hapus-ekstra', async (req, res) => {
             return res.status(400).json({ status: 'error', message: 'NIS, Password, dan Alasan wajib diisi' })
         }
 
-        const [cekAcc] = await db.query('SELECT nama FROM tb_siswa WHERE nis = ? AND password = ?', [nis, password])
-        if (cekAcc.length === 0) {
+        const [cekAcc] = await db.query('SELECT nama, password FROM tb_siswa WHERE nis = ?', [nis])
+        if (cekAcc.length === 0 || !(await verifyPassword(password, cekAcc[0].password))) {
             return res.status(401).json({ status: 'error', message: 'Verifikasi Gagal: NIS atau Password salah!' })
         }
 
@@ -1026,6 +1174,34 @@ app.get('/api/anggota', async (req, res) => {
             status: 'error',
             message: 'Gagal mengambil data anggota: ' + err.message
         })
+    }
+})
+
+app.post('/api/anggota/reset-password', async (req, res) => {
+    try {
+        const { admin_nis, target_nis, password_baru } = req.body
+        if (!admin_nis || !target_nis || !password_baru || String(password_baru).trim().length < 6) {
+            return res.status(400).json({ status: 'error', message: 'Admin, NIS akun, dan password baru minimal 6 karakter wajib diisi' })
+        }
+
+        const [adminRows] = await db.query('SELECT role FROM tb_siswa WHERE nis = ?', [admin_nis])
+        if (adminRows.length === 0 || adminRows[0].role !== 'admin') {
+            return res.status(403).json({ status: 'error', message: 'Hanya Admin yang dapat mereset password akun' })
+        }
+
+        const [targetRows] = await db.query('SELECT nis, nama FROM tb_siswa WHERE nis = ?', [target_nis])
+        if (targetRows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Akun yang akan direset tidak ditemukan' })
+        }
+
+        const passwordHash = await hashPassword(String(password_baru).trim())
+        await db.query('UPDATE tb_siswa SET password = ? WHERE nis = ?', [passwordHash, target_nis])
+        await catatAktivitas(target_nis, 'Password direset oleh Admin')
+        await buatNotifikasiInternal(target_nis, 'Password Direset', 'Password akun kamu telah direset oleh Admin. Silakan login menggunakan password baru.')
+
+        res.json({ status: 'success', message: `Password akun ${targetRows[0].nama} berhasil direset` })
+    } catch (err) {
+        res.status(500).json({ status: 'error', message: 'Gagal mereset password: ' + err.message })
     }
 })
 

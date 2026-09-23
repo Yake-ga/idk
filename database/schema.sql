@@ -9,6 +9,7 @@ DROP TABLE IF EXISTS tb_pengajuan_peran;
 DROP TABLE IF EXISTS tb_reaksi_komentar;
 DROP TABLE IF EXISTS tb_reaksi_kas;
 DROP TABLE IF EXISTS tb_komentar_kas;
+DROP TABLE IF EXISTS tb_piket_petugas;
 DROP TABLE IF EXISTS tb_piket;
 DROP TABLE IF EXISTS tb_kas;
 DROP TABLE IF EXISTS tb_siswa;
@@ -119,10 +120,18 @@ CREATE TABLE tb_reaksi_kas (
 
 CREATE TABLE tb_piket (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    tanggal DATE NOT NULL UNIQUE,
     hari VARCHAR(20) NOT NULL,
-    nama VARCHAR(100) NOT NULL,
-    tugas TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE tb_piket_petugas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    piket_id INT NOT NULL,
+    siswa_nis VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY piket_petugas_unik (piket_id, siswa_nis),
+    FOREIGN KEY (piket_id) REFERENCES tb_piket(id) ON DELETE CASCADE
 );
 
 CREATE TABLE tb_inventaris (

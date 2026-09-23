@@ -168,6 +168,17 @@ h4 { font-size: 0.9rem }
     gap: 6px;
 }
 
+.menu-fitur-beranda {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.menu-fitur-beranda .btn-tindakan {
+    min-height: 44px;
+}
+
 .baris-tombol-dua { display: flex; gap: 6px }
 .baris-tombol-dua .btn-tindakan { flex: 1 }
 
@@ -417,7 +428,9 @@ form button:hover { background-color: #dcdcdc }
     transform: translateX(-50%);
     width: 100%;
     max-width: 600px;
-    height: 40px;
+    min-height: 40px;
+    height: auto;
+    padding: 3px 2px;
     background-color: #f0f0f0;
     border-top: 1px solid #000000;
     border-left: 1px solid #000000;
@@ -433,7 +446,8 @@ form button:hover { background-color: #dcdcdc }
     border: none;
     font-size: 0.85rem;
     color: #000000;
-    padding: 4px 8px;
+    padding: 4px 5px;
+    flex: 1;
     cursor: pointer;
     font-family: 'Times New Roman', Times, serif;
 }

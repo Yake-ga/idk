@@ -86,62 +86,87 @@
             </section>
 
             <section id="halaman-beranda" class="halaman">
-                <article class="kartu-ringkasan utama">
-                    <h3>Sisa Saldo Kas Kelas</h3>
-                    <p id="beranda-saldo">Rp 0</p>
-                </article>
-                <div class="baris-ringkasan">
-                    <article class="kartu-ringkasan"><h4>Total Masuk</h4><p id="beranda-masuk">Rp 0</p></article>
-                    <article class="kartu-ringkasan"><h4>Total Keluar</h4><p id="beranda-keluar">Rp 0</p></article>
+                <div class="header-auth">
+                    <h2>Selamat Datang di ClassHub</h2>
+                    <p>Pilih fitur kelas yang ingin dibuka.</p>
                 </div>
-                <section class="blok-kontainer">
-                    <h3>Piket Kebersihan</h3>
-                    <ul id="daftar-piket-hari-ini" class="daftar-item-beranda"><li>Memuat jadwal piket...</li></ul>
-                    <form id="form-piket" style="margin-top:10px; display:none;">
-                        <label for="piket-hari">Hari</label>
-                        <select id="piket-hari" name="hari">
-                            <option value="Senin">Senin</option>
-                            <option value="Selasa">Selasa</option>
-                            <option value="Rabu">Rabu</option>
-                            <option value="Kamis">Kamis</option>
-                            <option value="Jumat">Jumat</option>
-                            <option value="Sabtu">Sabtu</option>
-                            <option value="Minggu">Minggu</option>
-                        </select>
-                        <label for="piket-nama">Nama Petugas</label>
-                        <input type="text" id="piket-nama" name="nama" placeholder="Nama petugas" required>
-                        <label for="piket-tugas">Tugas</label>
-                        <input type="text" id="piket-tugas" name="tugas" placeholder="Contoh: membersihkan papan, mengecek lantai" required>
-                        <button type="submit" style="margin-top:8px;">Simpan Jadwal Piket</button>
-                    </form>
-                </section>
-                <section class="blok-kontainer">
-                    <h3>Inventaris Kelas</h3>
-                    <ul id="daftar-inventaris-beranda" class="daftar-item-beranda"><li>Memuat inventaris...</li></ul>
-                    <form id="form-inventaris" style="margin-top:10px; display:none;">
-                        <label for="inventaris-nama">Nama Barang</label>
-                        <input type="text" id="inventaris-nama" name="nama_barang" placeholder="Nama barang" required>
-                        <label for="inventaris-kondisi">Kondisi</label>
-                        <select id="inventaris-kondisi" name="kondisi">
-                            <option value="Tersedia">Tersedia</option>
-                            <option value="Dipinjam">Dipinjam</option>
-                            <option value="Rusak">Rusak</option>
-                            <option value="Hilang">Hilang</option>
-                        </select>
-                        <label for="inventaris-jumlah">Jumlah</label>
-                        <input type="number" id="inventaris-jumlah" name="jumlah" min="1" value="1" required>
-                        <label for="inventaris-keterangan">Keterangan</label>
-                        <textarea id="inventaris-keterangan" name="keterangan" rows="2" placeholder="Keterangan tambahan..."></textarea>
-                        <button type="submit" style="margin-top:8px;">Simpan Inventaris</button>
-                    </form>
-                </section>
-                <div class="area-tombol-tindakan-beranda">
-                    <div class="baris-tombol-dua">
-                        <button type="button" class="btn-tindakan" data-halaman="halaman-input">Input Transaksi</button>
-                        <button type="button" class="btn-tindakan" data-halaman="halaman-uang-kas">Riwayat Transaksi</button>
+                <div class="menu-fitur-beranda">
+                    <button type="button" class="btn-tindakan utama" data-halaman="halaman-uang-kas">Kas Kelas</button>
+                    <button type="button" class="btn-tindakan" data-halaman="halaman-input">Input Transaksi</button>
+                    <button type="button" class="btn-tindakan" data-halaman="halaman-rekapan-kas">Rekapan Kas</button>
+                    <button type="button" class="btn-tindakan" data-halaman="halaman-piket">Jadwal Piket</button>
+                    <button type="button" class="btn-tindakan" data-halaman="halaman-inventaris">Inventaris Kelas</button>
+                    <button type="button" class="btn-tindakan" data-halaman="halaman-profil">Profil dan Aktivitas</button>
+                </div>
+            </section>
+
+            <section id="halaman-piket" class="halaman">
+                <div class="header-auth">
+                    <h2>Jadwal Piket</h2>
+                    <p>Atur petugas piket kelas berdasarkan tanggal.</p>
+                </div>
+                <div class="blok-kontainer">
+                    <div style="overflow:auto;">
+                        <table style="width:100%; border-collapse:collapse; min-width:520px;">
+                            <thead>
+                                <tr style="background:#eef4ff;">
+                                    <th style="padding:10px 12px; text-align:left;">Tanggal</th>
+                                    <th style="padding:10px 12px; text-align:left;">Hari</th>
+                                    <th style="padding:10px 12px; text-align:left;">Petugas</th>
+                                    <th style="padding:10px 12px; text-align:center;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-piket"></tbody>
+                        </table>
                     </div>
-                    <button type="button" class="btn-tindakan utama" data-halaman="halaman-rekapan-kas">Laporan Keuangan Database</button>
                 </div>
+                <form id="form-piket" style="display:none;">
+                    <label for="piket-tanggal">Tanggal Pelaksanaan</label>
+                    <input type="date" id="piket-tanggal" name="tanggal" required>
+                    <label for="piket-hari">Hari Pelaksanaan</label>
+                    <select id="piket-hari" name="hari" required>
+                        <option value="Senin">Senin</option>
+                        <option value="Selasa">Selasa</option>
+                        <option value="Rabu">Rabu</option>
+                        <option value="Kamis">Kamis</option>
+                        <option value="Jumat">Jumat</option>
+                        <option value="Sabtu">Sabtu</option>
+                        <option value="Minggu">Minggu</option>
+                    </select>
+                    <label>Petugas Piket</label>
+                    <div id="piket-petugas-list" style="display:grid; gap:6px; max-height:220px; overflow:auto; padding:8px; border:1px solid #d9dfe4; border-radius:8px; background:#f8fafc; margin-top:6px;"></div>
+                    <small style="display:block; margin-top:4px; color:var(--clr-text-muted);">Centang satu atau lebih petugas.</small>
+                    <div style="display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap;">
+                        <button type="submit" id="btn-submit-piket">Simpan Jadwal Piket</button>
+                        <button type="button" id="btn-batal-edit-piket" style="display:none;">Batal Edit</button>
+                    </div>
+                </form>
+            </section>
+
+            <section id="halaman-inventaris" class="halaman">
+                <div class="header-auth">
+                    <h2>Inventaris Kelas</h2>
+                    <p>Catat barang, jumlah, kondisi, dan keterangan inventaris.</p>
+                </div>
+                <section class="blok-kontainer">
+                    <ul id="daftar-inventaris-beranda" class="daftar-item-beranda"><li>Memuat inventaris...</li></ul>
+                </section>
+                <form id="form-inventaris" style="display:none;">
+                    <label for="inventaris-nama">Nama Barang</label>
+                    <input type="text" id="inventaris-nama" name="nama_barang" placeholder="Nama barang" required>
+                    <label for="inventaris-kondisi">Kondisi</label>
+                    <select id="inventaris-kondisi" name="kondisi">
+                        <option value="Tersedia">Tersedia</option>
+                        <option value="Dipinjam">Dipinjam</option>
+                        <option value="Rusak">Rusak</option>
+                        <option value="Hilang">Hilang</option>
+                    </select>
+                    <label for="inventaris-jumlah">Jumlah</label>
+                    <input type="number" id="inventaris-jumlah" name="jumlah" min="1" value="1" required>
+                    <label for="inventaris-keterangan">Keterangan</label>
+                    <textarea id="inventaris-keterangan" name="keterangan" rows="2" placeholder="Keterangan tambahan..."></textarea>
+                    <button type="submit" style="margin-top:8px;">Simpan Inventaris</button>
+                </form>
             </section>
 
             <section id="halaman-uang-kas" class="halaman">
@@ -219,6 +244,7 @@
                     </div>
 
                     <h3>Kelola Role Anggota</h3>
+                    <p class="pesan-info" style="font-size:0.75rem; margin:4px 0;">Untuk akun yang lupa password, Admin dapat membuat password sementara minimal 6 karakter.</p>
                     <ul id="daftar-anggota-admin" class="daftar-anggota-admin"><li>Memuat daftar akun...</li></ul>
 
                     <h3 style="margin-top:10px;">Kirim Broadcast Notifikasi</h3>
@@ -339,6 +365,8 @@
         <nav id="navigasi-utama" class="navigasi-bawah" style="display:none;">
             <button type="button" class="tombol-nav aktif" data-target="halaman-beranda">Beranda</button>
             <button type="button" class="tombol-nav" data-target="halaman-uang-kas">Kas</button>
+            <button type="button" class="tombol-nav" data-target="halaman-piket">Piket</button>
+            <button type="button" class="tombol-nav" data-target="halaman-inventaris">Inventaris</button>
             <button type="button" class="tombol-nav" data-target="halaman-input">Input</button>
             <button type="button" class="tombol-nav" data-target="halaman-rekapan-kas">Rekapan</button>
             <button type="button" class="tombol-nav" data-target="halaman-profil">Profil</button>
